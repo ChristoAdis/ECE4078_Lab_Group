@@ -18,7 +18,15 @@ class Detector:
             'capsicum': (255, 0, 0),
             'potato': (255, 255, 0),
             'pumpkin': (255, 165, 0),
-            'garlic': (255, 0, 255)
+            'garlic': (255, 0, 255),
+            'Orange': (0, 165, 255),
+            'Lemon': (0, 255, 255),
+            'Lime': (0, 255, 0),
+            'Tomato': (0, 0, 255),
+            'Capsicum': (255, 0, 0),
+            'Potato': (255, 255, 0),
+            'Pumpkin': (255, 165, 0),
+            'Garlic': (255, 0, 255)
         }
 
     def detect_single_image(self, img):
@@ -61,7 +69,9 @@ class Detector:
             cv_img    : image, e.g., image read by the cv2.imread() function
             model_path: str, e.g., 'yolov8n.pt', trained YOLOv8 model
         output:
-            bounding_boxes: list of lists, box info [label,[x,y,width,height]] for all detected targets in image
+            bounding_boxes: list of lists, box info [label,[x,y,width,height]] f
+            
+            or all detected targets in image
         """
 
         # predict target type and bounding box with your trained YOLO
@@ -88,9 +98,13 @@ if __name__ == '__main__':
     # get current script directory
     script_dir = os.path.dirname(os.path.abspath(__file__))
 
-    yolo = Detector(f'{script_dir}/model/yolov8_model.pt')
+    # yolo = Detector(f'{script_dir}/model/yolov8_model.pt')
+
+    yolo = Detector(f'{script_dir}/model/best_4_Sep.pt')
 
     img = cv2.imread(f'{script_dir}/test/test_image_1.png')
+
+    print(img.shape)
 
     bboxes, img_out = yolo.detect_single_image(img)
 

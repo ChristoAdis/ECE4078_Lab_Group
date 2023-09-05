@@ -30,8 +30,9 @@ class Operate:
         if not os.path.exists(self.folder):
             os.makedirs(self.folder)
         else:
-            shutil.rmtree(self.folder)
-            os.makedirs(self.folder)
+            pass
+            # shutil.rmtree(self.folder)
+            # os.makedirs(f"{self.folder}")
 
         # initialise data parameters
         if args.play_data:
@@ -48,6 +49,9 @@ class Operate:
             self.data = dh.DatasetWriter('record')
         else:
             self.data = None
+        ####################################################################
+        self.flag = False
+        ####################################################################
         self.output = dh.OutputWriter('lab_output')
         self.command = {'motion': [0, 0],
                         'inference': False,
@@ -140,6 +144,8 @@ class Operate:
 
     # save raw images taken by the camera
     def save_image(self):
+        self.image_id = len(os.listdir(self.folder))
+        # print(os.listdir(self.folder))
         f_ = os.path.join(self.folder, f'img_{self.image_id}.png')
         if self.command['save_image']:
             image = self.pibot.get_image()
@@ -239,6 +245,7 @@ class Operate:
 
     # keyboard teleoperation, replace with your M1 codes if preferred        
     def update_keyboard(self):
+
         for event in pygame.event.get():
             # drive forward
             if event.type == pygame.KEYDOWN and event.key == pygame.K_UP:
@@ -258,6 +265,12 @@ class Operate:
             # save image
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_i:
                 self.command['save_image'] = True
+            ######################################################################
+            # continuously save image per loop_interval
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_o:
+                self.flag = not self.flag
+            ######################################################################
+        
             # save SLAM map
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_s:
                 self.command['output'] = True
@@ -314,7 +327,9 @@ if __name__ == "__main__":
     parser.add_argument("--calib_dir", type=str, default="calibration/param/")
     parser.add_argument("--save_data", action='store_true')
     parser.add_argument("--play_data", action='store_true')
-    parser.add_argument("--yolo_model", default='YOLO/model/yolov8_model.pt')
+    # parser.add_argument("--yolo_model", default='YOLO/model/yolov8_model.pt')
+    parser.add_argument("--yolo_model", default='YOLO/model/best_4_Sep.pt')
+
     args, _ = parser.parse_known_args()
 
     pygame.font.init()
@@ -350,12 +365,32 @@ if __name__ == "__main__":
 
     operate = Operate(args)
 
+    
+    # Set up clock
+    clock = pygame.time.Clock()
+
+    # Initialize variables
+    
+    current_time = pygame.time.get_ticks()
+    loop_interval = 700  # 1000 milliseconds = 1 second
+
     while start:
         operate.update_keyboard()
         operate.take_pic()
         drive_meas = operate.control()
         operate.update_slam(drive_meas)
         operate.record_data()
+        
+        
+        # Check if 1 second has passed
+        if pygame.time.get_ticks() - current_time >= loop_interval:
+            current_time = pygame.time.get_ticks()  # Reset current_time
+
+            if operate.flag:    
+                # Your loop code here
+                operate.command['save_image'] = True
+                print(f" {loop_interval} milliseconds has passed.")
+
         operate.save_image()
         operate.detect_target()
         # visualise

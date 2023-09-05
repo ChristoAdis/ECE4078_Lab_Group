@@ -33,6 +33,7 @@ def estimate_pose(camera_matrix, obj_info, robot_pose):
     focal_length = camera_matrix[0][0]
 
     # there are 8 possible types of fruits and vegs
+
     ######### Replace with your codes #########
     # TODO: measure actual sizes of targets [width, depth, height] and update the dictionary of true target dimensions
     target_dimensions_dict = {'orange': [1.0,1.0,1.0], 'lemon': [1.0,1.0,1.0], 
@@ -41,15 +42,26 @@ def estimate_pose(camera_matrix, obj_info, robot_pose):
                               'pumpkin': [1.0,1.0,1.0], 'garlic': [1.0,1.0,1.0]}
     #########
 
+    ######################################################################
+    # Quick measurement
+    ######################################################################
+    target_dimensions_dict = {'Orange': [0.08,0.08,0.08], 'Lemon': [0.08,0.05,0.05], 
+                              'Lime': [0.08,0.05,0.05], 'Tomato': [0.07,0.07,0.07], 
+                              'Capsicum': [0.095,0.085,0.085], 'Potato': [0.11,0.06,0.05], 
+                              'Pumpkin': [0.07,0.085,0.085], 'Garlic': [0.08,0.065,0.065]}
+    ######################################################################
+    
+    '''FIND HEIGHT OF OBJECT IN IMAGE'''
     # estimate target pose using bounding box and robot pose
     target_class = obj_info[0]     # get predicted target label of the box
     target_box = obj_info[1]       # get bounding box measures: [x,y,width,height]
     true_height = target_dimensions_dict[target_class][2]   # look up true height of by class label
-
     # compute pose of the target based on bounding box info, true object height, and robot's pose
     pixel_height = target_box[3]
     pixel_center = target_box[0]
     distance = true_height/pixel_height * focal_length  # estimated distance between the object and the robot based on height
+
+    '''FIND LOCATION OF OBJECT IN IMAGE - RELATIVE TO ROBOT'''
     # image size 640x480 pixels, 640/2=320
     x_shift = 320/2 - pixel_center              # x distance between bounding box centre and centreline in camera view
     theta = np.arctan(x_shift/focal_length)     # angle of object relative to the robot
@@ -57,8 +69,8 @@ def estimate_pose(camera_matrix, obj_info, robot_pose):
     vertical_relative_distance = distance * np.cos(theta)       # relative distance between robot and object on y axis
     relative_pose = {'y': vertical_relative_distance, 'x': horizontal_relative_distance}    # relative object location
 
+    '''FIND LOCATION OF OBJECT IN WORLD - RELATIVE TO WORLD'''
     ang = theta + robot_pose[2]     # angle of object in the world frame
-
     # location of object in the world frame
     target_pose = {'y': (robot_pose[1]+relative_pose['y']*np.sin(ang))[0],
                    'x': (robot_pose[0]+relative_pose['x']*np.cos(ang))[0]}
@@ -75,12 +87,71 @@ def merge_estimations(target_pose_dict):
     output:
         target_est: dict, target pose estimations after merging
     """
-    target_est = {}
-
-    ######### Replace with your codes #########
-    # TODO: replace it with a solution to merge the multiple occurrences of the same class type (e.g., by a distance threshold)
     target_est = target_pose_dict
-    #########
+
+    # ######### Replace with your codes #########
+    # # TODO: replace it with a solution to merge the multiple occurrences of the same class type (e.g., by a distance threshold)
+    # target_est = {}
+
+    # fruit_est = {
+    #     'Orange': [], 'Lemon': [], 'Lime': [], 'Tomato': [], 'Capsicum': [], 'Potato': [], 'Pumpkin': [], 'Garlic': []
+    # }
+    
+    # '''
+    # # in main file: target_pose_dict[f'{detection[0]}_{occurrence}'] = estimate_pose(camera_matrix, detection, robot_pose)
+    # # --> need delimitation of fruit and occurrence to get fruit_estimations
+    
+    # # merge the estimations of the targets so that there are at most 3 estimations of each target type
+    # '''
+    # est_num = 3
+
+    # for fruit in target_pose_dict:
+    #     for key, val in target_pose_dict[fruit].items():
+    #         fruit_identity = key.split('_')[0]
+
+    #         # check and append FRUIT IDENTITY to fruit_estimations
+    #         if fruit_identity in fruit_est:
+    #             tmp = np.array(list(val.values()), dtype=np.float32)
+    #             fruit_est[fruit_identity].append(tmp)
+    
+
+    # # Merger the estimations per FRUIT IDENTITY
+    # for fruit_identity, est in fruit_est.items():      
+    #     if len(est) > est_num:
+    #         merged_est = est.copy()
+
+    #         while len(merged_est) > est_num:
+    #             # find pairwise distances
+    #             dist = np.linalg.norm(merged_est[:, np.newaxis] - merged_est, axis = -1 )
+    #             np.fill_diagonal(dist, np.inf) 
+
+    #             # find idx of the closest pair
+    #             idx = np.unravel_index(np.argmin(dist, axis=None), dist.shape)
+    #             min_idx_A, min_idx_B = idx[0], idx[1]
+
+    #             # Average
+    #             x_avg = (merged_est[min_idx_A][1] + merged_est[min_idx_B][1])/2
+    #             y_avg = (merged_est[min_idx_A][0] + merged_est[min_idx_B][0])/2   # y index 0
+
+    #             # Replace the closest pair with the average
+    #             est = np.delete(merged_est, [min_idx_A, min_idx_B], axis=0)    # based on index
+    #             est = np.append(merged_est, [[y_avg, x_avg]], axis=0)
+
+
+    #         ''' Examples template:
+    #         {
+    #         "orange_0": {
+    #             "y": -3.169372750566702,
+    #             "x": -3.097624836234285
+    #         },
+    #         '''
+    #         # return based on EXAPLE OUTPUT "targets.txt"
+    #         for i in range(est_num):
+    #             target_est[f'{fruit_identity}_{i}'] = {'y': merged_est[i][0], 'x': merged_est[i][1]}
+    
+    # #########
+
+
    
     return target_est
 
@@ -94,7 +165,9 @@ if __name__ == "__main__":
     camera_matrix = np.loadtxt(fileK, delimiter=',')
 
     # init YOLO model
-    model_path = f'{script_dir}/YOLO/model/yolov8_model.pt'
+    '''Replace model here <-------------'''
+    # model_path = f'{script_dir}/YOLO/model/yolov8_model.pt'
+    model_path = f'{script_dir}/YOLO/model/best_4_Sep.pt'
     yolo = Detector(model_path)
 
     # create a dictionary of all the saved images with their corresponding robot pose
